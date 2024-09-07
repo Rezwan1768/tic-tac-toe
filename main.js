@@ -1,14 +1,15 @@
 const gameBoard = (function () {
     const LENGTH = 3;
     const board = [];
-    const initializeBoard = (function () {
+    const initializeBoard = function () {
         for (let row = 0; row < LENGTH; ++row) {
             board[row] = [];
             for (let column = 0; column < LENGTH; ++column) {
                 board[row].push(createMarker(row, column));
             }
         }
-    })();
+    };
+    initializeBoard();
 
     const getBoard = () => board;
 
@@ -20,6 +21,7 @@ const gameBoard = (function () {
             });
             console.log(arr)
         });
+        console.log("\n");
     }
 
     function addMarker(row, column, marker) {
@@ -41,8 +43,14 @@ const gameBoard = (function () {
     }
 
     // check all the different ways to win
-    const winnigCells = [];
+    let winnigCells = [];
     const getWinningCells = () => winnigCells;
+    // const resetWinningCells = () => winnigCells = [];
+    function resetBoard() {
+        board.length = 0;
+        initializeBoard();
+        winnigCells = [];
+    }
 
     function checkWiningConditions(row, column, marker) {
 
@@ -104,7 +112,7 @@ const gameBoard = (function () {
 
     return {
         addMarker, getBoard, printBoard, isBordFull, checkWiningConditions,
-        getWinningCells
+        getWinningCells, resetBoard,
     };
 
 })()
@@ -153,6 +161,7 @@ const gameControl = (function () {
     const getWinningPlayer = () => winningPlayer;
     const isGameOver = () => gameOver;
 
+
     function playTurn(row, column) {
         let playerMarker = activePlayer.getMarker();
 
@@ -174,7 +183,13 @@ const gameControl = (function () {
         }
     }
 
-    return { getActivePlayer, playTurn, isGameOver, getWinningPlayer };
+    function resetGame() {
+        // activePlayer = p1;
+        winningPlayer = null;
+        gameOver = false;
+    }
+
+    return { getActivePlayer, playTurn, isGameOver, getWinningPlayer, resetGame };
 })()
 
 
@@ -182,27 +197,51 @@ const screenControl = (function () {
     const messageDiv = document.querySelector("div.message");
     const boardDiv = document.querySelector("div.board");
     const board = gameBoard.getBoard();
-    const winnigCells = gameBoard.getWinningCells();
     let activePlayer = gameControl.getActivePlayer().getName();
 
-
-    // Come back here ____---------------
     function displayMessage(message) {
         messageDiv.textContent = message;
     }
 
+    function addResetButton() {
+        const container = document.querySelector(".container");
+        const resetButton = document.createElement("button");
+        resetButton.textContent = "Reset";
+        resetButton.classList.add("reset-button");
+        resetButton.addEventListener("click", resetGame);
+        container.appendChild(resetButton);
+    }
+
+    function resetGame(event) {
+        boardDiv.innerHTML = "";
+
+        // Reset game logic and board
+        gameControl.resetGame();
+        gameBoard.resetBoard();
+
+        // Recreate the board UI
+        createBoard();
+
+        // Remove the reset button after the reset
+        event.target.remove();
+    }
+
     function createBoard() {
+        const board = gameBoard.getBoard();
         board.forEach((row, rowIndex) => {
             row.forEach((cell, colIndex) => {
                 const cellButton = document.createElement("button");
+                // Setting a row and column data attributes allows for 
                 cellButton.dataset.row = rowIndex;
                 cellButton.dataset.column = colIndex;
                 cellButton.classList.add("cell");
+                cellButton.classList.remove("winning-cell")
                 cellButton.addEventListener("click", cellClickHandler);
                 boardDiv.appendChild(cellButton);
             });
         });
-        displayMessage(`${activePlayer}'s Turn`)
+        displayMessage(`${gameControl.getActivePlayer().getName()}'s Turn`);
+        addResetButton();
     }
 
     function cellClickHandler(event) {
@@ -214,9 +253,10 @@ const screenControl = (function () {
             gameControl.playTurn(row, column);
             updateCellContent(event.target, row, column);
             activePlayer = gameControl.getActivePlayer().getName();
+
             if (gameControl.isGameOver() && gameControl.getWinningPlayer() !== null) {
                 displayMessage(`${gameControl.getWinningPlayer().getName()} Won!`);
-                showWinnigCombinations();
+                highLightWinnigCells();
             } else if (gameControl.isGameOver()) {
                 displayMessage("Tied Game!");
             } else {
@@ -229,20 +269,20 @@ const screenControl = (function () {
         cell.textContent = board[row][column].getMarker();
     }
 
-    function showWinnigCombinations() {
+    function highLightWinnigCells() {
+        const winnigCells = gameBoard.getWinningCells();
         winnigCells.forEach(winningCombination => {
             winningCombination.forEach(cell => {
                 let row = cell.getRow();
                 let col = cell.getColumn();
                 const button = document.querySelector(
                     `button[data-row="${row}"][data-column="${col}"]`);
-                button.classList.add("winningButton");
+                button.classList.add("winning-cell");
             });
         });
     }
 
     // Display the initial board
     createBoard();
-    // displayMessage(`${activePlayer}'s turn`);
 })();
 
